@@ -1,5 +1,6 @@
 package com.PractionBE;
 
+import com.PractionBE.dtos.request.UserRequest;
 import io.restassured.RestAssured;
 import io.restassured.response.ExtractableResponse;
 import io.restassured.response.Response;
@@ -13,11 +14,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class UserAPITest {
 
-    public static ExtractableResponse<Response> createUser(User user){
-        ExtractableResponse<Response> response =
+    public static ExtractableResponse<Response> createUser(UserRequest userRequest){
+        var response =
                 RestAssured.given().log().all()
-                        .body(user)
                         .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .body(userRequest)
                         .when().post("/users")
                         .then().log().all()
                         .extract();
@@ -25,13 +26,37 @@ public class UserAPITest {
         return response;
     }
 
-    public static List<String> getUserEmails(){
+    public static List<String> getUserNicknames(){
         List<String> userIds =
                 RestAssured.given().log().all()
                         .when().get("/users")
                         .then().log().all()
-                        .extract().jsonPath().getList("email", String.class);
+                        .extract().jsonPath().getList("nickName", String.class);
         return userIds;
+    }
+
+    public static ExtractableResponse<Response> updateUser(Long id, UserRequest updateRequest){
+        var response = RestAssured.given().log().all()
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(updateRequest)
+                .when().put("/users/" + id)
+                .then().log().all()
+                .extract();
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+        return response;
+    }
+
+    public static ExtractableResponse<Response> deleteUser(Long id){
+        var response = RestAssured.given().log().all()
+                .when().delete("/users/" + id)
+                .then().log().all()
+                .extract();
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.NO_CONTENT.value());
+        return response;
+    }
+
+    public static Long getUserId(ExtractableResponse<Response> response){
+        return response.jsonPath().getLong("id");
     }
 
     public static UUID generateUUID(){

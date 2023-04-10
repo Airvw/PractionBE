@@ -1,28 +1,39 @@
 package com.PractionBE;
 
+import com.PractionBE.dtos.request.UserRequest;
+import com.PractionBE.service.DataService;
+import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.util.List;
 
-import static com.PractionBE.UserAPITest.createUser;
-import static com.PractionBE.UserAPITest.getUserEmails;
+import static com.PractionBE.UserAPITest.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserAcceptanceTest {
 
-
-    private User admin;
-    private User test;
+    private UserRequest admin;
+    private UserRequest test;
     private UserRequest updateRequest;
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private DataService dataService;
 
     @BeforeEach
     void setUp(){
-        admin = new User("admin", "관리자", "1234");
-        test = new User("test@scourt.go.kr", "test", "1234qwer");
-        updateRequest = new UserRequest("update@scourt.go.kr", "1234");
+        RestAssured.port = port;
+        dataService.truncateTables();
+        admin = new UserRequest("admin", "관리자", "1234", "관리자");
+        test = new UserRequest("test@scourt.go.kr", "테스트계정", "1234qwer", "테스트");
+        updateRequest = new UserRequest("1234", "테스트변경");
     }
 
     /**
@@ -33,8 +44,8 @@ public class UserAcceptanceTest {
     @Test
     void userCreateTest(){
         createUser(admin);
-        List<String> userEmails = getUserEmails();
-        assertThat(userEmails).containsAnyOf("admin");
+        List<String> userEmails = getUserNicknames();
+        assertThat(userEmails).containsAnyOf("관리자");
     }
 
     /**
@@ -43,11 +54,11 @@ public class UserAcceptanceTest {
      * Then 2개의 아이디를 조회할 수 있다.
      */
     @Test
-    void getUserEmailsTest(){
+    void getUserNicknamesTest(){
         createUser(admin);
         createUser(test);
-        List<String> userEmails = getUserEmails();
-        assertThat(userEmails).containsExactlyInAnyOrder("admin", "test");
+        List<String> userEmails = getUserNicknames();
+        assertThat(userEmails).containsExactlyInAnyOrder("관리자", "테스트");
     }
 
     /**
@@ -59,10 +70,10 @@ public class UserAcceptanceTest {
     void updateUserTest(){
         var response = createUser(test);
         Long id = getUserId(response);
-        updateUser(updateRequest, id);
+        updateUser(id, updateRequest);
 
-        List<String> userEmails =getUserEmails();
-        assertThat(userEmails).containsExactly("update@scourt.go.kr");
+        List<String> userEmails = getUserNicknames();
+        assertThat(userEmails).containsExactly("테스트변경");
     }
 
 
@@ -73,12 +84,13 @@ public class UserAcceptanceTest {
      */
     @Test
     void deleteUserTest(){
+        dataService.truncateTables();
         var response = createUser(test);
         Long id = getUserId(response);
 
         deleteUser(id);
 
-        List<String> userEmails = getUserEmails();
-        assertThat(userEmails).doesNotContain("test@scourt.go.kr");
+        List<String> userEmails = getUserNicknames();
+        assertThat(userEmails).doesNotContain("테스트");
     }
 }
